@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yukimura Seika's Portfolio</title>
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@700&display=swap');
+
+    /* ══════════════════════════════════════════════
+       LANDING OVERLAY (lightweight, lag-free version)
+       Only transform + opacity are animated below.
+       No filter/blur/drop-shadow animation, no JS
+       layout measuring, no huge off-screen translates.
+    ══════════════════════════════════════════════ */
+    #landing-overlay {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #0a0e27 0%, #000000 50%, #030b3a 100%);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* ── Content wrapper ── */
+    #welcome-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      z-index: 2;
+      text-align: center;
+    }
+
+    /* "Hi there, I'm" */
+    #welcome-sub {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: clamp(0.75rem, 2vw, 1rem);
+      letter-spacing: 0.55em;
+      color: #C9D8FF;
+      text-transform: uppercase;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeUp 0.6s ease forwards;
+      animation-delay: 0.15s;
+    }
+
+    /* "Mohana Pranav" name */
+    #welcome-name {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: clamp(1.1rem, 3vw, 1.8rem);
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      color: #ffffff;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeUp 0.6s ease forwards;
+      animation-delay: 0.35s;
+    }
+
+    /* WELCOME word — static markup, CSS-only stagger animation */
+    #welcome-word {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: clamp(3.5rem, 11vw, 7.5rem);
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      white-space: nowrap;
+      line-height: 1;
+      position: relative;
+    }
+
+    .wl {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(16px);
+      animation: letterIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      /* single static glow, never animated */
+      text-shadow:
+        0 0 15px rgba(255,255,255,0.8),
+        0 0 35px rgba(120,180,255,0.5);
+    }
+
+    .wl.orange {
+      color: #4F9FFF;
+      text-shadow:
+        0 0 15px rgba(79,159,255,0.9),
+        0 0 35px rgba(79,159,255,0.6);
+    }
+    .wl.white {
+      color: #FFFFFF;
+    }
+
+    /* Radial glow behind assembled WELCOME */
+    #welcome-glow {
+      position: absolute;
+      width: min(800px, 90vw);
+      height: 300px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(
+        ellipse,
+        rgba(121, 178, 248, 0.12) 0%,
+        rgba(10, 16, 102, 0.103) 40%,
+        transparent 70%
+      );
+      opacity: 0;
+      transition: opacity 0.6s ease;
+      pointer-events: none;
+      z-index: 1;
+    }
+    #welcome-glow.show { opacity: 1; }
+
+    /* Divider */
+    #welcome-bar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    #welcome-bar.open { opacity: 1; }
+    .bar-line {
+      height: 1px;
+      width: 80px;
+      background: linear-gradient(90deg, transparent, #356FD6, transparent);
+    }
+    .bar-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #4F9FFF;
+      box-shadow: 0 0 8px rgba(79,159,255,0.9);
+    }
+
+    /* Tagline */
+    #welcome-tag {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: clamp(0.65rem, 1.8vw, 0.88rem);
+      letter-spacing: 0.42em;
+      color: #8EA6D8;
+      text-transform: uppercase;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    #welcome-tag.visible { opacity: 1; transform: translateY(0); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes letterIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Exit — the "door" wipe. clip-path is the ONLY thing
+       animating here (no blur/shadow/JS alongside it). Duration
+       is 2s — enough to read clearly as a wipe without dragging
+       on like the original 2.8s. ── */
+    @keyframes doorSlide {
+      0%   { clip-path: inset(0 0 0%   0); }
+      100% { clip-path: inset(0 0 100% 0); }
+    }
+    #landing-overlay.slide-away {
+      animation: doorSlide 2s cubic-bezier(0.76,0,0.24,1) forwards;
+      pointer-events: none;
+    }
+    #landing-overlay.done {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- LANDING OVERLAY                                 -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div id="landing-overlay" aria-hidden="true">
+
+    <!-- Soft radial glow behind WELCOME word -->
+    <div id="welcome-glow"></div>
+
+    <div id="welcome-wrap">
+      <div id="welcome-sub">Hi there, I'm</div>
+      <div id="welcome-name">Yukimura </div>
+
+      <!-- Static letters, staggered purely via CSS animation-delay -->
+      <div id="welcome-word">
+        <span class="wl orange" style="animation-delay:0.90s">W</span>
+        <span class="wl white"  style="animation-delay:0.98s">E</span>
+        <span class="wl white"  style="animation-delay:1.06s">L</span>
+        <span class="wl white"  style="animation-delay:1.14s">C</span>
+        <span class="wl orange" style="animation-delay:1.22s">O</span>
+        <span class="wl white"  style="animation-delay:1.30s">M</span>
+        <span class="wl orange" style="animation-delay:1.38s">E</span>
+      </div>
+
+      <div id="welcome-bar">
+        <div class="bar-line"></div>
+        <div class="bar-dot"></div>
+        <div class="bar-line"></div>
+      </div>
+      <div id="welcome-tag"> &nbsp;&nbsp; to My Portfolio &nbsp;&nbsp; &nbsp;&nbsp;</div>
+    </div>
+
+  </div>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <!-- PORTFOLIO MARKUP (UNCHANGED)                    -->
+  <!-- ─────────────────────────────────────────────── -->
+
+  <!-- Animated Background -->
+  <div class="background-animation"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="logo">Yukimura Seika</div>
+      <div class="mobile-menu" id="menuBtn">
+        <div class="hamburger"></div>
+        <div class="hamburger"></div>
+        <div class="hamburger"></div>
+      </div>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#home" class="nav-link active">Home</a></li>
+        <li><a href="#about" class="nav-link">About</a></li>
+        <li><a href="#skills" class="nav-link">Skills</a></li>
+        <li><a href="#projects" class="nav-link">Projects</a></li>
+        <li><a href="#contact" class="nav-link">Contact</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="main-container">
+
+    <!-- Home Section -->
+    <div class="content-section active" id="home">
+      <div class="home-section">
+        <!-- <div class="profile-section rain-drop">
+          <img src="my image.png" alt="Pranav">
+          
+        </div> -->
+        <div class="profile-section rain-drop">
+      <div class="orbit-ring"></div>
+      <span class="orbit-dot dot1"></span>
+      <span class="orbit-dot dot2"></span>
+      <span class="orbit-dot dot3"></span>
+
+      <img src="my image.png" alt="Yukimura Seika">
+
+      <div class="badge badge-top">
+  <span class="badge-icon">🔎</span>
+  <div>
+    <strong>Cross-Domain Explorer</strong>
+    <p>Explore. Learn. Build. Repeat</p>
+  </div>
+</div>
+
+<div class="badge badge-left">
+  <span class="badge-icon">🧩</span>
+  <div>
+    <strong>Curious Builder</strong>
+    <p>Curiosity → Creation</p>
+  </div>
+</div>
+
+<div class="badge badge-bottom">
+  <span class="badge-icon">🔄</span>
+  <div>
+    <strong>Always Evolving</strong>
+    <p>Think. Code. Evolve.</p>
+  </div>
+</div>
+    </div>
+        <div class="hero-content">
+          <h1 class="rain-drop">Hello, I'm <span class="highlight">Yukimura Seika</span></h1>
+          <h3 class="hero-description rain-drop">
+          <span id="typing-text">Web Developer</span>
+        </h3>
+          <a href="#about" class="cta-button nav-link rain-drop">Discover More</a>
+          <div class="social-links rain-drop">
+            <a href="https://www.linkedin.com/in/mohana-pranav-1b087b2bb?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" target="_blank" class="social-box linkedin">
+              <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn">
+            </a>
+            <a href="https://github.com/Pranav18M" target="_blank" class="social-box github">
+              <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" 
+               style="filter: invert(1);">
+            </a>
+            <a href="https://mail.google.com/mail/?view=cm&to=skyflep@gmail.com" 
+            target="_blank" class="social-box email">
+              <img src="https://cdn-icons-png.flaticon.com/512/732/732200.png" alt="Email">
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- About Section -->
+    <div class="content-section" id="about">
+      <div class="content-box">
+        <div class="nav-buttons">
+          <button class="back-btn" onclick="goBack()">Back</button>
+          <button class="next-btn" onclick="goNext('skills')">Next</button>
+        </div>
+        <h2 class="rain-drop">About Me</h2>
+        <p class="rain-drop">I'm Yukimura Seika — a Passionate MERN Stack Developer with hands-on experience building and deploying 4 production-grade full-stack web applications.I work with React.js, Node.js, TypeScript and MongoDB — and I'm an AWS Certified Cloud Practitioner proficient in RESTful API development, JWT Authentication, and cloud deployment on Vercel and Render.</p>
+        <p class="rain-drop"></p>
+      </div>
+    </div>
+
+    <!-- Skills Section -->
+    <div class="content-section" id="skills">
+      <div class="content-box">
+        <div class="nav-buttons">
+          <button class="back-btn" onclick="goBack()">Back</button>
+          <button class="next-btn" onclick="goNext('projects')">Next</button>
+        </div>
+        <h2 class="rain-drop">My Skills</h2>
+        <div class="skills-grid">
+          <div class="skill-box rain-drop">
+            <h3>Frontend</h3>
+            <div class="skill-icons">
+              <img src="https://cdn-icons-png.flaticon.com/512/732/732212.png" alt="HTML" title="HTML">
+              <img src="https://cdn-icons-png.flaticon.com/512/732/732190.png" alt="CSS" title="CSS">
+              <img src="https://cdn-icons-png.flaticon.com/512/5968/5968292.png" alt="JavaScript" title="JavaScript">
+              <img src="https://cdn-icons-png.flaticon.com/512/1126/1126012.png" alt="React" title="React">
+              <img src="https://cdn-icons-png.flaticon.com/512/919/919832.png" alt="TypeScript" title="TypeScript">
+            </div>
+          </div>
+          <div class="skill-box rain-drop">
+            <h3>Backend</h3>
+            <div class="skill-icons">
+              <img src="https://cdn-icons-png.flaticon.com/512/919/919825.png" alt="Node.js" title="Node.js">
+              <img src="https://img.icons8.com/fluency/256/express-js.png" alt="Express.js" title="Express.js">
+              <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" alt="Java" title="Java">
+              <img src="https://cdn-icons-png.flaticon.com/512/2165/2165004.png" alt="REST API" title="REST API">
+              <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/nestjs/nestjs-original.svg" alt="NestJS" title="NestJS">
+            </div>
+          </div>
+          <div class="skill-box rain-drop">
+            <h3>Database</h3>
+            <div class="skill-icons">
+              <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mongodb/mongodb-original.svg" alt="MongoDB" title="MongoDB">
+              <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg" alt="MySQL" title="MySQL">
+              <img src="https://cdn.simpleicons.org/postgresql/4169E1"alt="PostgreSQL" title="PostgreSQL">
+              <img src="https://cdn.simpleicons.org/supabase/3ECF8E"alt="Supabase" title="Supabase">
+            </div>
+          </div>
+          <div class="skill-box rain-drop">
+            <h3>Tools</h3>
+            <div class="skill-icons">
+              <img src="https://cdn-icons-png.flaticon.com/512/2111/2111288.png" alt="Git" title="Git">
+              <img src="https://cdn-icons-png.flaticon.com/512/733/733609.png" alt="GitHub" title="GitHub">
+              <img src="https://cdn-icons-png.flaticon.com/512/906/906324.png" alt="VS Code" title="VS Code">
+              <img src="https://cdn.simpleicons.org/postman/FF6C37" alt="Postman" title="Postman">
+              <img src="https://cdn.simpleicons.org/npm/CB3837"alt="npm" title="npm">
+            </div>
+          </div>
+           <div class="skill-box rain-drop">
+            <h3>Platforms</h3>
+            <div class="skill-icons">
+                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vercel/vercel-original.svg"
+                    alt="Vercel" title="Vercel">
+
+                
+                <img src="https://cdn.simpleicons.org/render/46E3B7"
+                    alt="Render" title="Render">
+
+                
+                <img src="https://cdn.simpleicons.org/railway/FFFFFF"
+                    alt="Railway" title="Railway">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Projects Section -->
+    <div class="content-section" id="projects">
+      <div class="content-box">
+        <div class="nav-buttons">
+          <button class="back-btn" onclick="goBack()">Back</button>
+          <button class="next-btn" onclick="goNext('certifications')">Next</button>
+        </div>
+        <h2 class="rain-drop">My Projects</h2>
+        <div class="projects-grid">
+          <a href="https://nimoindustries.com/" target="_blank" class="project-card rain-drop">
+            <h3>Reactjs & Nextjs</h3>
+            <p>Nimo is a B2B digital banking/lending SaaS platform for banks and lenders, built on AWS with a multi-tenant, serverless cloud architecture, APIs, and AI.</p>
+          </a>
+          <a href="https://mock-intervue-ai.vercel.app/" target="_blank" class="project-card rain-drop">
+            <h3>InterviewAI</h3>
+            <p>AI-powered mock interview platform with voice interviews, real-time scoring, ATS resume analyzer, and resume generator--built with React, Node.js+NestJS, MongoDB, and Google Gemini AI.</p>
+          </a>
+          <a href="https://shop-ix.vercel.app/" target="_blank" class="project-card rain-drop">
+            <h3>Shop-ix</h3>
+            <p>Full-stack e-commerce platform with Spring Boot, React, JWT auth, admin panel, seller dashboard, UPI payments & Telegram order notifications.</p>
+          </a>
+          <a href="https://think-byte.vercel.app/" target="_blank" class="project-card rain-drop">
+            <h3>ThinkByte</h3>
+            <p>Developed a online coding platform enabling users to solve programming problems, execute code, and track submissions with accuracy-based evaluation.</p>
+          </a>
+          <a href="https://ats-resumescanner-ai.vercel.app/" target="_blank" class="project-card rain-drop">
+            <h3>ATS-Resume_scanner</h3>
+            <p>Recruiter's Assistant — Simplifies resume shortlisting with ATS-based scanning.</p>
+          </a>
+          <a href="https://shopease-io.vercel.app/" target="_blank" class="project-card rain-drop">
+            <h3>ShopEase</h3>
+            <p>Modern e-commerce platform built for seamless shopping, featuring scalable architecture, secure payments, and smooth UX.</p>
+          </a>
+          <a href="https://fit-nest-018.vercel.app/" target="_blank" class="project-card rain-drop">
+            <h3>FitNest</h3>
+            <p>A fitness tracking application designed to help users stay consistent with their workouts and health goals.</p>
+          </a>
+          <a href="https://pranav-to-do-list.vercel.app/" target="_blank" class="project-card rain-drop">
+            <h3>To-Do-List</h3>
+            <p>Task management tool to help users organize daily activities efficiently.</p>
+          </a>
+          <a href="https://pranavperfumy.vercel.app/" target="_blank" class="project-card rain-drop">
+            <h3>Perfumy</h3>
+            <p>Perfume ordering platform where users can browse and place orders online.</p>
+          </a>
+          <a href="https://booksky-018.vercel.app/" target="_blank" class="project-card rain-drop">
+            <h3>BookSky</h3>
+            <p>Book management tool allowing users to save book titles and personal notes.</p>
+          </a>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Certification Popup -->
+    <div id="certPopup" class="cert-popup">
+      <div class="cert-popup-content">
+        <span class="close-btn" onclick="closeCert()">&times;</span>
+        <img id="certImage" src="" alt="Certification" class="cert-full">
+      </div>
+    </div>
+
+    <!-- Contact Section -->
+    <div class="content-section" id="contact">
+      <div class="content-box">
+        <div class="nav-buttons">
+          <button class="back-btn" onclick="goBack()">Back</button>
+          <button class="next-btn" onclick="goNext('home')">Next</button>
+        </div>
+        <h2 class="rain-drop">Contact Me</h2>
+        <form class="contact-form rain-drop" onsubmit="handleSubmit(event)">
+          <input type="text" name="name" placeholder="Your Name" required>
+          <input type="email" name="email" placeholder="Your Email" required>
+          <textarea name="message" placeholder="Your Message" required></textarea>
+          <button type="submit" class="contact-submit" id="contact-submit">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            <span id="submit-text">Send Message</span>
+          </button>
+
+        </form>
+      </div>
+    </div>
+
+  </div><!-- /.main-container -->
+
+  <script src="script.js"></script>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- LANDING ANIMATION SCRIPT (lightweight)          -->
+  <!-- All timing/motion is handled by CSS above.      -->
+  <!-- This script only triggers the exit — a single   -->
+  <!-- timer, no DOM creation, no layout measuring.    -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <script>
+  (function () {
+    'use strict';
+
+    const overlay = document.getElementById('landing-overlay');
+    const barEl   = document.getElementById('welcome-bar');
+    const tagEl   = document.getElementById('welcome-tag');
+    const glowEl  = document.getElementById('welcome-glow');
+
+    if (!overlay) return;
+
+    // Letters finish landing around 1.38s + 0.45s ≈ 1.85s
+    const LETTERS_DONE  = 1900;
+    const HOLD          = 1600;  // how long WELCOME stays fully visible
+    const EXIT_DURATION = 1400;  // must match doorSlide animation duration in CSS
+
+    // Reveal glow / bar / tagline right after letters land
+    setTimeout(function () {
+      if (glowEl) glowEl.classList.add('show');
+      if (barEl)  barEl.classList.add('open');
+      if (tagEl)  tagEl.classList.add('visible');
+    }, LETTERS_DONE);
+
+    // Exit — trigger the door wipe, then hide once it finishes
+    setTimeout(function () {
+      overlay.classList.add('slide-away');
+
+      setTimeout(function () {
+        overlay.classList.add('done');
+      }, EXIT_DURATION);
+
+      // Reveal the home section partway through the wipe, same as before
+      setTimeout(function () {
+        const homeSection = document.querySelector('.home-section');
+        if (homeSection) homeSection.classList.add('zoom-reveal');
+      }, EXIT_DURATION * 0.9);
+
+    }, LETTERS_DONE + HOLD);
+
+  })();
+  </script>
+
+</body>
+</html>
